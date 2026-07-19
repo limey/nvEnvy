@@ -1,0 +1,25 @@
+// Shared build settings for all nvEnvy developers (macOS targets).
+//
+// These are the upstream defaults, kept here (rather than in project.yml)
+// so individual developers CAN override them: build settings written into
+// the generated .pbxproj take precedence over xcconfig values, so anything
+// meant to be overridable must live in this file. project.yml references
+// the entitlements file indirectly as $(NVENVY_ENTITLEMENTS), resolved at
+// build time from the value below.
+//
+// Per-developer overrides belong in `Local.xcconfig` next to this file.
+// Local.xcconfig is gitignored and optional — when it is absent the build
+// is identical to the upstream defaults. Typical overrides:
+//
+//   DEVELOPMENT_TEAM = <your team ID>
+//   PRODUCT_BUNDLE_IDENTIFIER = <your own bundle ID>
+//   NVENVY_ENTITLEMENTS = Config/Local.entitlements
+//
+// (A local entitlements copy lets you drop or re-point the iCloud
+// ubiquity-kvstore entitlement, which is tied to upstream's App ID.)
+
+PRODUCT_BUNDLE_IDENTIFIER = com.nvenvy.app
+NVENVY_ENTITLEMENTS = nvEnvy/nvEnvy.entitlements
+
+// Local overrides must win, so the include comes last.
+#include? "Local.xcconfig"
