@@ -757,7 +757,19 @@ public final class AppState {
 
     // MARK: - Flush on quit
 
-    public func flushBeforeQuit() async {
-        await notes.flushBeforeQuit()
+    /// Main-actor, synchronous capture of quit-time state (pending body edit
+    /// and the note store). Call from `applicationWillTerminate`, which runs
+    /// on the main thread, before blocking on the async flush.
+    public func prepareForQuitFlush() -> (store: NoteStore, pendingBody: (noteID: UUID, body: String)?)? {
+        notes.prepareForQuitFlush()
+    }
+
+    /// Off-main-actor flush: never needs the main executor, so the app
+    /// delegate may block the main thread waiting for it without deadlocking.
+    public nonisolated func flushBeforeQuit(
+        store: NoteStore,
+        pendingBody: (noteID: UUID, body: String)?
+    ) async {
+        await notes.flushBeforeQuit(store: store, pendingBody: pendingBody)
     }
 }

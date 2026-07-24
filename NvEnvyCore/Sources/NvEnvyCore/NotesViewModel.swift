@@ -446,18 +446,28 @@ public final class NotesViewModel {
         await performSearch()
     }
 
-    public func flushBeforeQuit() async {
+    /// Captures quit-time state synchronously on the main actor: cancels the
+    /// body-edit debounce and returns the note store plus any unflushed body
+    /// edit, so the caller can flush off the main actor (see `flushBeforeQuit`).
+    public func prepareForQuitFlush() -> (store: NoteStore, pendingBody: (noteID: UUID, body: String)?)? {
         bodyUpdateTask?.cancel()
         bodyUpdateTask = nil
-        if let pending = pendingBodyUpdate {
-            pendingBodyUpdate = nil
-            note(for: pending.noteID)?.invalidateSearchCache()
-            await noteStore?.updateBody(noteID: pending.noteID, body: pending.body)
+        defer { pendingBodyUpdate = nil }
+        guard let store = noteStore else { return nil }
+        return (store, pendingBodyUpdate)
+    }
+
+    /// Flushes quit-time state to disk. Touches only the `NoteStore` actor —
+    /// never the main executor — so it is safe to await while the main thread
+    /// is blocked in `applicationWillTerminate`.
+    public nonisolated func flushBeforeQuit(
+        store: NoteStore,
+        pendingBody: (noteID: UUID, body: String)?
+    ) async {
+        if let pendingBody {
+            await store.updateBody(noteID: pendingBody.noteID, body: pendingBody.body)
         }
-        for note in allNotes {
-            note.invalidateSearchCache()
-        }
-        await noteStore?.flushDirtyNotes()
+        await store.flushDirtyNotes()
     }
 
     // MARK: - Import

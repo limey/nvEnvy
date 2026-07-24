@@ -352,10 +352,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        guard let appState = appState else { return }
+        // Called on the main thread. Capture main-actor state synchronously,
+        // then flush off the main actor: the flush must never need the main
+        // executor, or the semaphore wait below would deadlock against it
+        // (a @MainActor task cannot run while the main thread is blocked).
+        guard let appState = appState,
+              let prepared = appState.prepareForQuitFlush() else { return }
         let semaphore = DispatchSemaphore(value: 0)
-        Task { @MainActor in
-            await appState.flushBeforeQuit()
+        Task {
+            await appState.flushBeforeQuit(
+                store: prepared.store, pendingBody: prepared.pendingBody
+            )
             semaphore.signal()
         }
         semaphore.wait(timeout: .now() + 5)
