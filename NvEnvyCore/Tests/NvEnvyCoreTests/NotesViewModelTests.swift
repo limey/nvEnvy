@@ -226,7 +226,10 @@ final class NotesViewModelTests: XCTestCase {
         // the state the app is in if it's backgrounded/killed right after a
         // keystroke. flushBeforeQuit must not lose this edit.
         vm.updateNoteBody(noteID: note.id, body: "unsaved edit")
-        await vm.flushBeforeQuit()
+        let prepared = vm.prepareForQuitFlush()
+        if let prepared {
+            await vm.flushBeforeQuit(store: prepared.store, pendingBody: prepared.pendingBody)
+        }
 
         let fileURL = tempDir.appendingPathComponent(note.filename + ".md")
         let contents = try String(contentsOf: fileURL, encoding: .utf8)
